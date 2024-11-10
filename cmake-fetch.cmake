@@ -5,6 +5,15 @@ set(fetch_module_dir "${CMAKE_CURRENT_LIST_DIR}")
 include(FetchContent)
 
 function(fetch_package specifier)
+  set(one_value_keywords
+    SOURCE_DIR
+    BINARY_DIR
+  )
+
+  cmake_parse_arguments(
+    PARSE_ARGV 1 ARGV "" "${one_value_keywords}" ""
+  )
+
   if(specifier MATCHES "^([A-Za-z0-9_]+):(@?[A-Za-z0-9_/-]+)(#[A-Z-a-z0-9_.-]+)?(@[0-9]+\.[0-9]+\.[0-9]+)?")
     set(protocol "${CMAKE_MATCH_1}")
     set(package "${CMAKE_MATCH_2}")
@@ -43,4 +52,20 @@ function(fetch_package specifier)
   )
 
   FetchContent_MakeAvailable(${target})
+
+  FetchContent_GetProperties(
+    ${target}
+    SOURCE_DIR ${target}_SOURCE_DIR
+    BINARY_DIR ${target}_BINARY_DIR
+  )
+
+  if(DEFINED ARGV_SOURCE_DIR)
+    set(${ARGV_SOURCE_DIR} ${${target}_SOURCE_DIR})
+  endif()
+
+  if(DEFINED ARGV_BINARY_DIR)
+    set(${ARGV_BINARY_DIR} ${${target}_BINARY_DIR})
+  endif()
+
+  return(PROPAGATE ${ARGV_SOURCE_DIR} ${ARGV_BINARY_DIR})
 endfunction()
