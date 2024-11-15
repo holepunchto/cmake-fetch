@@ -1,5 +1,9 @@
 include_guard()
 
+# Ensure that package search paths aren't rerooted when a toolchain defines a
+# system root, such as when cross compiling for iOS and Android.
+set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE BOTH)
+
 set(fetch_module_dir "${CMAKE_CURRENT_LIST_DIR}")
 
 include(FetchContent)
