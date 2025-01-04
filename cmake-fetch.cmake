@@ -18,18 +18,23 @@ function(fetch_package specifier)
     PARSE_ARGV 1 ARGV "" "${one_value_keywords}" ""
   )
 
-  if(specifier MATCHES "^([A-Za-z0-9_]+):(@?[A-Za-z0-9_/-]+)(#[A-Z-a-z0-9_.-]+)?(@[0-9]+\.[0-9]+\.[0-9]+)?")
+  if(specifier MATCHES "^([A-Za-z0-9_]+):")
     set(protocol "${CMAKE_MATCH_1}")
-    set(package "${CMAKE_MATCH_2}")
-    set(ref "${CMAKE_MATCH_3}")
-    set(version "${CMAKE_MATCH_4}")
   else()
     message(FATAL_ERROR "Invalid package specifier \"${specifier}\"")
   endif()
 
-  string(REGEX REPLACE "/" "+" target "${protocol}+${package}")
-
   if(protocol MATCHES "github")
+    if(specifier MATCHES "^github:(@?[A-Za-z0-9_/-]+)(#[A-Z-a-z0-9_.-]+)?(@[0-9]+\.[0-9]+\.[0-9]+)?")
+      set(package "${CMAKE_MATCH_1}")
+      set(ref "${CMAKE_MATCH_2}")
+      set(version "${CMAKE_MATCH_3}")
+    else()
+      message(FATAL_ERROR "Invalid package specifier \"${specifier}\"")
+    endif()
+
+    string(REGEX REPLACE "/" "+" target "${protocol}+${package}")
+
     if(version)
       string(REGEX REPLACE "@" "" tag "v${version}")
     elseif(ref)
@@ -42,6 +47,20 @@ function(fetch_package specifier)
       GIT_REPOSITORY "https://github.com/${package}.git"
       GIT_TAG "${tag}"
       GIT_REMOTE_UPDATE_STRATEGY REBASE_CHECKOUT
+    )
+  elseif(protocol MATCHES "https?")
+    if(specifier MATCHES "^https?://(.+)")
+      set(resource "${CMAKE_MATCH_1}")
+    else()
+      message(FATAL_ERROR "Invalid package specifier \"${specifier}\"")
+    endif()
+
+    string(REGEX REPLACE "/" "+" target "${protocol}+${resource}")
+
+    set(args
+      URL "${specifier}"
+      TLS_VERSION 1.2
+      TLS_VERIFY ON
     )
   else()
     message(FATAL_ERROR "Unknown package protocol \"${protocol}\"")
