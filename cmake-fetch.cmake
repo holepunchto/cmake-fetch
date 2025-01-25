@@ -8,16 +8,7 @@ set(fetch_module_dir "${CMAKE_CURRENT_LIST_DIR}")
 
 include(FetchContent)
 
-function(fetch_package specifier)
-  set(one_value_keywords
-    SOURCE_DIR
-    BINARY_DIR
-  )
-
-  cmake_parse_arguments(
-    PARSE_ARGV 1 ARGV "" "${one_value_keywords}" ""
-  )
-
+function(parse_fetch_specifier specifier target args)
   if(specifier MATCHES "^([A-Za-z0-9_]+):")
     set(protocol "${CMAKE_MATCH_1}")
   else()
@@ -33,7 +24,9 @@ function(fetch_package specifier)
       message(FATAL_ERROR "Invalid package specifier \"${specifier}\"")
     endif()
 
-    string(REGEX REPLACE "/" "+" target "${protocol}+${package}")
+    string(REGEX REPLACE "/" "+" escaped "${protocol}+${package}")
+
+    set(${target} ${escaped} PARENT_SCOPE)
 
     if(version)
       string(REGEX REPLACE "@" "" tag "v${version}")
@@ -43,10 +36,39 @@ function(fetch_package specifier)
       set(tag "main")
     endif()
 
-    set(args
+    set(${args}
       GIT_REPOSITORY "https://github.com/${package}.git"
       GIT_TAG "${tag}"
       GIT_REMOTE_UPDATE_STRATEGY REBASE_CHECKOUT
+      PARENT_SCOPE
+    )
+  elseif(protocol MATCHES "git")
+    if(specifier MATCHES "^git:([^/]+)/([A-Za-z0-9_/-]+)(#[A-Z-a-z0-9_.-]+)?(@[0-9]+\.[0-9]+\.[0-9]+)?")
+      set(host "${CMAKE_MATCH_1}")
+      set(repo "${CMAKE_MATCH_2}")
+      set(ref "${CMAKE_MATCH_3}")
+      set(version "${CMAKE_MATCH_4}")
+    else()
+      message(FATAL_ERROR "Invalid package specifier \"${specifier}\"")
+    endif()
+
+    if(version)
+      string(REGEX REPLACE "@" "" tag "v${version}")
+    elseif(ref)
+      string(REGEX REPLACE "#" "" tag "${ref}")
+    else()
+      set(tag "main")
+    endif()
+
+    string(REGEX REPLACE "/" "+" escaped "${protocol}+${host}+${repo}")
+
+    set(${target} ${escaped} PARENT_SCOPE)
+
+    set(${args}
+      GIT_REPOSITORY "https://${host}/${repo}.git"
+      GIT_TAG "${tag}"
+      GIT_REMOTE_UPDATE_STRATEGY REBASE_CHECKOUT
+      PARENT_SCOPE
     )
   elseif(protocol MATCHES "https?")
     if(specifier MATCHES "^https?://(.+)")
@@ -55,16 +77,32 @@ function(fetch_package specifier)
       message(FATAL_ERROR "Invalid package specifier \"${specifier}\"")
     endif()
 
-    string(REGEX REPLACE "/" "+" target "${protocol}+${resource}")
+    string(REGEX REPLACE "/" "+" escaped "${protocol}+${resource}")
 
-    set(args
+    set(${target} ${escaped} PARENT_SCOPE)
+
+    set(${args}
       URL "${specifier}"
       TLS_VERSION 1.2
       TLS_VERIFY ON
+      PARENT_SCOPE
     )
   else()
     message(FATAL_ERROR "Unknown package protocol \"${protocol}\"")
   endif()
+endfunction()
+
+function(fetch_package specifier)
+  set(one_value_keywords
+    SOURCE_DIR
+    BINARY_DIR
+  )
+
+  cmake_parse_arguments(
+    PARSE_ARGV 1 ARGV "" "${one_value_keywords}" ""
+  )
+
+  parse_fetch_specifier(${specifier} target args)
 
   FetchContent_Declare(
     ${target}

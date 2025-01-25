@@ -12,6 +12,8 @@ find_package(cmake-fetch REQUIRED PATHS node_modules/cmake-fetch)
 
 ## API
 
+#### `parse_fetch_specifier(<specifier> <target> <args>)`
+
 #### `fetch_package(<specifier> [SOURCE_DIR <var>] [BINARY_DIR <var>])`
 
 ## License
