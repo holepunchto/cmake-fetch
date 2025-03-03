@@ -98,16 +98,24 @@ function(fetch_package specifier)
     BINARY_DIR
   )
 
-  cmake_parse_arguments(
-    PARSE_ARGV 1 ARGV "" "${one_value_keywords}" ""
+  set(multi_value_keywords
+    PATCHES
   )
+
+  cmake_parse_arguments(
+    PARSE_ARGV 1 ARGV "" "${one_value_keywords}" "${multi_value_keywords}"
+  )
+
+  list(TRANSFORM ARGV_PATCHES PREPEND "${CMAKE_CURRENT_LIST_DIR}/")
+
+  list(JOIN ARGV_PATCHES "$<SEMICOLON>" patches)
 
   parse_fetch_specifier(${specifier} target args)
 
   FetchContent_Declare(
     ${target}
     ${args}
-    PATCH_COMMAND ${CMAKE_COMMAND} -P "${fetch_module_dir}/patch.cmake"
+    PATCH_COMMAND ${CMAKE_COMMAND} -DPATCHES=${patches} -P "${fetch_module_dir}/patch.cmake"
     EXCLUDE_FROM_ALL ON
     OVERRIDE_FIND_PACKAGE
   )
