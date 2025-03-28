@@ -36,9 +36,16 @@ function(parse_fetch_specifier specifier target args)
       set(tag "main")
     endif()
 
+    if(tag MATCHES "^[0-9a-f]+$")
+      set(shallow OFF)
+    else()
+      set(shallow ON)
+    endif()
+
     set(${args}
       GIT_REPOSITORY "https://github.com/${package}.git"
       GIT_TAG "${tag}"
+      GIT_SHALLOW ${shallow}
       GIT_PROGRESS ON
       GIT_REMOTE_UPDATE_STRATEGY REBASE_CHECKOUT
       PARENT_SCOPE
@@ -61,6 +68,12 @@ function(parse_fetch_specifier specifier target args)
       set(tag "main")
     endif()
 
+    if(tag MATCHES "^[0-9a-f]+$")
+      set(shallow OFF)
+    else()
+      set(shallow ON)
+    endif()
+
     string(REGEX REPLACE "/" "+" escaped "${protocol}+${host}+${repo}")
 
     set(${target} ${escaped} PARENT_SCOPE)
@@ -68,6 +81,7 @@ function(parse_fetch_specifier specifier target args)
     set(${args}
       GIT_REPOSITORY "https://${host}/${repo}.git"
       GIT_TAG "${tag}"
+      GIT_SHALLOW ${shallow}
       GIT_PROGRESS ON
       GIT_REMOTE_UPDATE_STRATEGY REBASE_CHECKOUT
       PARENT_SCOPE
