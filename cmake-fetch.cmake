@@ -39,6 +39,7 @@ function(parse_fetch_specifier specifier target args)
     set(${args}
       GIT_REPOSITORY "https://github.com/${package}.git"
       GIT_TAG "${tag}"
+      GIT_PROGRESS ON
       GIT_REMOTE_UPDATE_STRATEGY REBASE_CHECKOUT
       PARENT_SCOPE
     )
@@ -67,6 +68,7 @@ function(parse_fetch_specifier specifier target args)
     set(${args}
       GIT_REPOSITORY "https://${host}/${repo}.git"
       GIT_TAG "${tag}"
+      GIT_PROGRESS ON
       GIT_REMOTE_UPDATE_STRATEGY REBASE_CHECKOUT
       PARENT_SCOPE
     )
