@@ -124,7 +124,7 @@ function(fetch_package specifier)
 
   list(TRANSFORM ARGV_PATCHES PREPEND "${CMAKE_CURRENT_LIST_DIR}/")
 
-  list(JOIN ARGV_PATCHES "$<SEMICOLON>" patches)
+  list(JOIN ARGV_PATCHES ":" patches)
 
   parse_fetch_specifier(${specifier} target args)
 
