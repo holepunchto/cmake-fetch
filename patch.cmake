@@ -33,7 +33,7 @@ else()
   )
 endif()
 
-string(REPLACE ":" ";" patches "${PATCHES}")
+string(REPLACE "$<SEMICOLON>" ";" patches "${PATCHES}")
 
 foreach(patch IN LISTS patches)
   get_filename_component(patch "${patch}" REALPATH)
