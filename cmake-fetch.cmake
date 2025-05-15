@@ -110,6 +110,7 @@ endfunction()
 
 function(fetch_package specifier)
   set(one_value_keywords
+    SOURCE_SUBDIR
     SOURCE_DIR
     BINARY_DIR
   )
@@ -126,7 +127,13 @@ function(fetch_package specifier)
 
   list(JOIN ARGV_PATCHES "$<SEMICOLON>" patches)
 
+  set(args)
+
   parse_fetch_specifier(${specifier} target args)
+
+  if(DEFINED ARGV_SOURCE_SUBDIR)
+    list(APPEND args SOURCE_SUBDIR "${ARGV_SOURCE_SUBDIR}"})
+  endif()
 
   FetchContent_Declare(
     ${target}
