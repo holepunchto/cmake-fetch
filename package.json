@@ -1,6 +1,6 @@
 {
   "name": "cmake-fetch",
-  "version": "1.4.4",
+  "version": "1.4.5",
   "description": "Minimal package manager for CMake based on `FetchContent`",
   "files": [
     "*.cmake"
