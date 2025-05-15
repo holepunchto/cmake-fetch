@@ -132,7 +132,7 @@ function(fetch_package specifier)
   parse_fetch_specifier(${specifier} target args)
 
   if(DEFINED ARGV_SOURCE_SUBDIR)
-    list(APPEND args SOURCE_SUBDIR "${ARGV_SOURCE_SUBDIR}"})
+    list(APPEND args SOURCE_SUBDIR "${ARGV_SOURCE_SUBDIR}")
   endif()
 
   FetchContent_Declare(
