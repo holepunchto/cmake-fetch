@@ -15,11 +15,11 @@ function(parse_fetch_specifier specifier target args)
     message(FATAL_ERROR "Invalid package specifier \"${specifier}\"")
   endif()
 
-  if(protocol MATCHES "github")
-    if(specifier MATCHES "^github:(@?[A-Za-z0-9_/-]+)(#[A-Z-a-z0-9_.-]+)?(@[0-9]+\.[0-9]+\.[0-9]+)?")
-      set(package "${CMAKE_MATCH_1}")
-      set(ref "${CMAKE_MATCH_2}")
-      set(version "${CMAKE_MATCH_3}")
+  if(protocol MATCHES "git(hub|lab)")
+    if(specifier MATCHES "^git(hub|lab):(@?[A-Za-z0-9_/-]+)(#[A-Z-a-z0-9_.-]+)?(@[0-9]+\.[0-9]+\.[0-9]+)?")
+      set(package "${CMAKE_MATCH_2}")
+      set(ref "${CMAKE_MATCH_3}")
+      set(version "${CMAKE_MATCH_4}")
     else()
       message(FATAL_ERROR "Invalid package specifier \"${specifier}\"")
     endif()
@@ -43,7 +43,7 @@ function(parse_fetch_specifier specifier target args)
     endif()
 
     set(${args}
-      GIT_REPOSITORY "https://github.com/${package}.git"
+      GIT_REPOSITORY "https://${protocol}.com/${package}.git"
       GIT_TAG "${tag}"
       GIT_SHALLOW ${shallow}
       GIT_PROGRESS ON
