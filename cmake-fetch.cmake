@@ -9,6 +9,14 @@ set(fetch_module_dir "${CMAKE_CURRENT_LIST_DIR}")
 include(FetchContent)
 
 function(parse_fetch_specifier specifier target args)
+  cmake_language(GET_MESSAGE_LOG_LEVEL log_level)
+
+  if(log_level MATCHES "STATUS|VERBOSE|DEBUG|TRACE")
+    set(progress ON)
+  else()
+    set(progress OFF)
+  endif()
+
   if(specifier MATCHES "^([A-Za-z0-9_]+):")
     set(protocol "${CMAKE_MATCH_1}")
   else()
@@ -46,7 +54,7 @@ function(parse_fetch_specifier specifier target args)
       GIT_REPOSITORY "https://${protocol}.com/${package}.git"
       GIT_TAG "${tag}"
       GIT_SHALLOW ${shallow}
-      GIT_PROGRESS ON
+      GIT_PROGRESS ${progress}
       GIT_REMOTE_UPDATE_STRATEGY REBASE_CHECKOUT
       PARENT_SCOPE
     )
@@ -82,7 +90,7 @@ function(parse_fetch_specifier specifier target args)
       GIT_REPOSITORY "https://${host}/${repo}.git"
       GIT_TAG "${tag}"
       GIT_SHALLOW ${shallow}
-      GIT_PROGRESS ON
+      GIT_PROGRESS ${progress}
       GIT_REMOTE_UPDATE_STRATEGY REBASE_CHECKOUT
       PARENT_SCOPE
     )
@@ -97,10 +105,17 @@ function(parse_fetch_specifier specifier target args)
 
     set(${target} ${escaped} PARENT_SCOPE)
 
+    if(progress)
+      set(no_progress OFF)
+    else()
+      set(no_progress ON)
+    endif()
+
     set(${args}
       URL "${specifier}"
       TLS_VERSION 1.2
       TLS_VERIFY ON
+      DOWNLOAD_NO_PROGRESS ${no_progress}
       PARENT_SCOPE
     )
   else()
