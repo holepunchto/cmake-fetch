@@ -13,8 +13,14 @@ if(EXISTS "package.json")
     )
   endif()
 
+  if(EXISTS "package-lock.json")
+    set(command clean-install)
+  else()
+    set(command install)
+  endif()
+
   execute_process(
-    COMMAND "${npm}" install
+    COMMAND "${npm}" ${command}
     COMMAND_ERROR_IS_FATAL ANY
   )
 endif()
