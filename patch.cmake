@@ -13,6 +13,8 @@ if(EXISTS "package.json")
     )
   endif()
 
+  set(npm "${npm}")
+
   if(CMAKE_HOST_WIN32)
     find_program(
       sfw
@@ -25,10 +27,8 @@ if(EXISTS "package.json")
     )
   endif()
 
-  if(sfw MATCHES "NOTFOUND")
-    set(npm "${npm}")
-  else()
-    set(npm "${sfw}" "${npm}")
+  if(NOT sfw MATCHES "NOTFOUND")
+    set(npm "${sfw}" ${npm})
   endif()
 
   if(EXISTS "package-lock.json")
@@ -39,9 +39,9 @@ if(EXISTS "package.json")
 
   execute_process(
     COMMAND ${npm} ${install} --ignore-scripts --foreground-scripts --allow-git=none
+    OUTPUT_QUIET
     RESULT_VARIABLE result
     ERROR_VARIABLE error
-    OUTPUT_QUIET
   )
 
   if(NOT result EQUAL 0)
@@ -70,17 +70,17 @@ foreach(patch IN LISTS patches)
 
   execute_process(
     COMMAND ${git} apply --ignore-whitespace "${patch}"
+    OUTPUT_QUIET
     RESULT_VARIABLE result
     ERROR_VARIABLE error
-    OUTPUT_QUIET
   )
 
   if(NOT result EQUAL 0)
     execute_process(
       COMMAND ${git} apply --ignore-whitespace --check --reverse "${patch}"
+      OUTPUT_QUIET
       RESULT_VARIABLE result
       ERROR_VARIABLE error
-      OUTPUT_QUIET
     )
 
     if(NOT result EQUAL 0)
