@@ -13,16 +13,40 @@ if(EXISTS "package.json")
     )
   endif()
 
-  if(EXISTS "package-lock.json")
-    set(command clean-install)
+  if(CMAKE_HOST_WIN32)
+    find_program(
+      sfw
+      NAMES sfw.cmd sfw
+    )
   else()
-    set(command install)
+    find_program(
+      sfw
+      NAMES sfw
+    )
+  endif()
+
+  if(sfw MATCHES "NOTFOUND")
+    set(npm "${npm}")
+  else()
+    set(npm "${sfw}" "${npm}")
+  endif()
+
+  if(EXISTS "package-lock.json")
+    set(install clean-install)
+  else()
+    set(install install)
   endif()
 
   execute_process(
-    COMMAND "${npm}" ${command}
-    COMMAND_ERROR_IS_FATAL ANY
+    COMMAND ${npm} ${install} --ignore-scripts --foreground-scripts --allow-git=none
+    RESULT_VARIABLE result
+    ERROR_VARIABLE error
+    OUTPUT_QUIET
   )
+
+  if(NOT result EQUAL 0)
+    message(FATAL_ERROR "Dependencies could not be installed: ${error}")
+  endif()
 endif()
 
 if(CMAKE_HOST_WIN32)
@@ -48,6 +72,7 @@ foreach(patch IN LISTS patches)
     COMMAND ${git} apply --ignore-whitespace "${patch}"
     RESULT_VARIABLE result
     ERROR_VARIABLE error
+    OUTPUT_QUIET
   )
 
   if(NOT result EQUAL 0)
@@ -55,6 +80,7 @@ foreach(patch IN LISTS patches)
       COMMAND ${git} apply --ignore-whitespace --check --reverse "${patch}"
       RESULT_VARIABLE result
       ERROR_VARIABLE error
+      OUTPUT_QUIET
     )
 
     if(NOT result EQUAL 0)
