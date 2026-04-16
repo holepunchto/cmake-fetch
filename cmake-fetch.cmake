@@ -59,41 +59,69 @@ function(parse_fetch_specifier specifier target args)
       PARENT_SCOPE
     )
   elseif(protocol MATCHES "git")
-    if(specifier MATCHES "^git:([^/]+)/([A-Za-z0-9_./-]+)(#[A-Z-a-z0-9_.-]+)?(@[0-9]+\.[0-9]+\.[0-9]+)?")
+    if(specifier MATCHES "^git:(.+\\.bundle)(#[A-Za-z0-9_.-]+)?(@[0-9]+\\.[0-9]+\\.[0-9]+)?$")
+      set(path "${CMAKE_MATCH_1}")
+      set(ref "${CMAKE_MATCH_2}")
+      set(version "${CMAKE_MATCH_3}")
+
+      cmake_path(ABSOLUTE_PATH path BASE_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" NORMALIZE)
+
+      cmake_path(GET path STEM stem)
+
+      string(REGEX REPLACE "/" "+" escaped "git+bundle+${stem}")
+
+      set(${target} ${escaped} PARENT_SCOPE)
+
+      if(version)
+        string(REGEX REPLACE "@" "" tag "v${version}")
+      elseif(ref)
+        string(REGEX REPLACE "#" "" tag "${ref}")
+      else()
+        set(tag "main")
+      endif()
+
+      set(${args}
+        GIT_REPOSITORY "${path}"
+        GIT_TAG "${tag}"
+        GIT_PROGRESS ${progress}
+        GIT_CONFIG submodule.active=none
+        PARENT_SCOPE
+      )
+    elseif(specifier MATCHES "^git:([^/]+)/([A-Za-z0-9_./-]+)(#[A-Z-a-z0-9_.-]+)?(@[0-9]+\.[0-9]+\.[0-9]+)?")
       set(host "${CMAKE_MATCH_1}")
       set(repo "${CMAKE_MATCH_2}")
       set(ref "${CMAKE_MATCH_3}")
       set(version "${CMAKE_MATCH_4}")
+
+      if(version)
+        string(REGEX REPLACE "@" "" tag "v${version}")
+      elseif(ref)
+        string(REGEX REPLACE "#" "" tag "${ref}")
+      else()
+        set(tag "main")
+      endif()
+
+      if(tag MATCHES "^[0-9a-f]+$")
+        set(shallow OFF)
+      else()
+        set(shallow ON)
+      endif()
+
+      string(REGEX REPLACE "/" "+" escaped "${protocol}+${host}+${repo}")
+
+      set(${target} ${escaped} PARENT_SCOPE)
+
+      set(${args}
+        GIT_REPOSITORY "https://${host}/${repo}.git"
+        GIT_TAG "${tag}"
+        GIT_SHALLOW ${shallow}
+        GIT_PROGRESS ${progress}
+        GIT_REMOTE_UPDATE_STRATEGY REBASE_CHECKOUT
+        PARENT_SCOPE
+      )
     else()
       message(FATAL_ERROR "Invalid package specifier \"${specifier}\"")
     endif()
-
-    if(version)
-      string(REGEX REPLACE "@" "" tag "v${version}")
-    elseif(ref)
-      string(REGEX REPLACE "#" "" tag "${ref}")
-    else()
-      set(tag "main")
-    endif()
-
-    if(tag MATCHES "^[0-9a-f]+$")
-      set(shallow OFF)
-    else()
-      set(shallow ON)
-    endif()
-
-    string(REGEX REPLACE "/" "+" escaped "${protocol}+${host}+${repo}")
-
-    set(${target} ${escaped} PARENT_SCOPE)
-
-    set(${args}
-      GIT_REPOSITORY "https://${host}/${repo}.git"
-      GIT_TAG "${tag}"
-      GIT_SHALLOW ${shallow}
-      GIT_PROGRESS ${progress}
-      GIT_REMOTE_UPDATE_STRATEGY REBASE_CHECKOUT
-      PARENT_SCOPE
-    )
   elseif(protocol MATCHES "https?")
     if(specifier MATCHES "^https?://(.+)")
       set(resource "${CMAKE_MATCH_1}")
