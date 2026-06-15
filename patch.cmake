@@ -68,16 +68,21 @@ string(REPLACE "$<SEMICOLON>" ";" patches "${PATCHES}")
 foreach(patch IN LISTS patches)
   get_filename_component(patch "${patch}" REALPATH)
 
+  # Only apply patches that still apply cleanly. A patch that no longer applies
+  # is assumed to be applied already, which keeps patching idempotent across
+  # reconfigures without reverting local modifications to the checkout. This is
+  # also robust when several patches modify overlapping context, where
+  # detecting an applied patch by reverse application is unreliable.
   execute_process(
-    COMMAND ${git} apply --ignore-whitespace "${patch}"
+    COMMAND ${git} apply --ignore-whitespace --check "${patch}"
     OUTPUT_QUIET
+    ERROR_QUIET
     RESULT_VARIABLE result
-    ERROR_VARIABLE error
   )
 
-  if(NOT result EQUAL 0)
+  if(result EQUAL 0)
     execute_process(
-      COMMAND ${git} apply --ignore-whitespace --check --reverse "${patch}"
+      COMMAND ${git} apply --ignore-whitespace "${patch}"
       OUTPUT_QUIET
       RESULT_VARIABLE result
       ERROR_VARIABLE error
