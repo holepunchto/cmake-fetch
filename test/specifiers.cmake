@@ -2,21 +2,15 @@
 # name, which becomes directory names under `_deps` and the OVERRIDE_FIND_PACKAGE
 # name, and the FetchContent arguments.
 #
-# Nothing here touches the network. Run with `cmake -P test/specifiers.cmake`.
-
-cmake_minimum_required(VERSION 3.25)
+# Nothing here touches the network. Run through `cmake -P test.cmake`.
 
 include("${CMAKE_CURRENT_LIST_DIR}/../cmake-fetch.cmake")
-
-set(failures 0)
 
 function(expect_name specifier expected)
   parse_fetch_specifier("${specifier}" name args)
 
   if(NOT name STREQUAL expected)
     message(SEND_ERROR "${specifier}\n  expected name ${expected}\n  actual   name ${name}")
-    math(EXPR failures "${failures} + 1")
-    set(failures ${failures} PARENT_SCOPE)
   endif()
 endfunction()
 
@@ -27,8 +21,6 @@ function(expect_arg specifier key expected)
 
   if(i EQUAL -1)
     message(SEND_ERROR "${specifier}\n  expected ${key} in args, got: ${args}")
-    math(EXPR failures "${failures} + 1")
-    set(failures ${failures} PARENT_SCOPE)
     return()
   endif()
 
@@ -37,8 +29,6 @@ function(expect_arg specifier key expected)
 
   if(NOT actual STREQUAL expected)
     message(SEND_ERROR "${specifier}\n  expected ${key} ${expected}\n  actual   ${key} ${actual}")
-    math(EXPR failures "${failures} + 1")
-    set(failures ${failures} PARENT_SCOPE)
   endif()
 endfunction()
 
@@ -52,8 +42,6 @@ function(expect_name_shorter_than specifier limit)
 
   if(NOT length LESS ${limit})
     message(SEND_ERROR "${specifier}\n  expected a name shorter than ${limit}, got ${length}: ${name}")
-    math(EXPR failures "${failures} + 1")
-    set(failures ${failures} PARENT_SCOPE)
   endif()
 endfunction()
 
@@ -73,7 +61,6 @@ parse_fetch_specifier("https://example.com/pkg/v2/prebuilds.zip" two args)
 
 if(one STREQUAL two)
   message(SEND_ERROR "expected distinct names for distinct URLs, both gave ${one}")
-  math(EXPR failures "${failures} + 1")
 endif()
 
 # A query string belongs to neither the stem nor the name.
@@ -90,9 +77,5 @@ expect_name_shorter_than(
   "https://example.com/a/really-quite-long-artifact-filename-that-goes-on-and-on-forever.zip"
   48
 )
-
-if(failures GREATER 0)
-  message(FATAL_ERROR "${failures} assertion(s) failed")
-endif()
 
 message(STATUS "specifiers: ok")
