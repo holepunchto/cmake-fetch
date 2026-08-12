@@ -1,0 +1,23 @@
+name: Integrate
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+permissions:
+  contents: read
+jobs:
+  test:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-24.04
+          - os: windows-2022
+          - os: macos-26
+    runs-on: ${{ matrix.os }}
+    name: Test / ${{ matrix.os }}
+    steps:
+      - uses: holepunchto/actions/node-base@v1
+      - run: npm test

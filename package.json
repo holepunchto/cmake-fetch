@@ -5,6 +5,12 @@
   "files": [
     "*.cmake"
   ],
+  "scripts": {
+    "test": "cmake -P test/specifiers.cmake"
+  },
+  "devDependencies": {
+    "cmake-runtime": "^4.3.1"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/holepunchto/cmake-fetch.git"
