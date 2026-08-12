@@ -129,9 +129,28 @@ function(parse_fetch_specifier specifier target args)
       message(FATAL_ERROR "Invalid package specifier \"${specifier}\"")
     endif()
 
-    string(REGEX REPLACE "/" "+" escaped "${protocol}+${resource}")
+    # Name the package after the resource's file stem plus a digest of the URL,
+    # rather than escaping the whole URL. ExternalProject repeats this name three
+    # levels deep, so a long one pushes paths past the 260 character limit on
+    # Windows and the populate step never completes.
+    string(REGEX REPLACE "[?#].*$" "" resource "${resource}")
 
-    set(${target} ${escaped} PARENT_SCOPE)
+    cmake_path(GET resource STEM LAST_ONLY stem)
+
+    string(REGEX REPLACE "[^A-Za-z0-9_.-]" "-" stem "${stem}")
+
+    if(stem STREQUAL "")
+      set(stem "archive")
+    endif()
+
+    # Bound the stem too, or a long filename just moves the problem.
+    string(SUBSTRING "${stem}" 0 24 stem)
+
+    string(SHA256 digest "${specifier}")
+
+    string(SUBSTRING "${digest}" 0 8 digest)
+
+    set(${target} "${protocol}+${stem}+${digest}" PARENT_SCOPE)
 
     if(progress)
       set(no_progress OFF)
