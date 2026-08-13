@@ -5,6 +5,9 @@
   "files": [
     "*.cmake"
   ],
+  "scripts": {
+    "test": "cmake -P test.cmake"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/holepunchto/cmake-fetch.git"
@@ -14,5 +17,8 @@
   "bugs": {
     "url": "https://github.com/holepunchto/cmake-fetch/issues"
   },
-  "homepage": "https://github.com/holepunchto/cmake-fetch#readme"
+  "homepage": "https://github.com/holepunchto/cmake-fetch#readme",
+  "devDependencies": {
+    "cmake-runtime": "^4.3.1"
+  }
 }
