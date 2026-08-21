@@ -175,6 +175,7 @@ function(fetch_package specifier)
     SOURCE_SUBDIR
     SOURCE_DIR
     BINARY_DIR
+    SUBMODULES
   )
 
   set(multi_value_keywords
@@ -195,6 +196,13 @@ function(fetch_package specifier)
 
   if(DEFINED ARGV_SOURCE_SUBDIR)
     list(APPEND args SOURCE_SUBDIR "${ARGV_SOURCE_SUBDIR}")
+  endif()
+
+  # An empty GIT_SUBMODULES is dropped when this list is expanded into
+  # FetchContent_Declare, so the submodules are switched off through the clone's
+  # own config instead.
+  if(DEFINED ARGV_SUBMODULES AND NOT ARGV_SUBMODULES)
+    list(APPEND args GIT_CONFIG submodule.active=none)
   endif()
 
   FetchContent_Declare(

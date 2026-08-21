@@ -32,6 +32,16 @@ function(expect_arg specifier key expected)
   endif()
 endfunction()
 
+function(expect_no_arg specifier key)
+  parse_fetch_specifier("${specifier}" name args)
+
+  list(FIND args "${key}" i)
+
+  if(NOT i EQUAL -1)
+    message(SEND_ERROR "${specifier}\n  expected no ${key} in args, got: ${args}")
+  endif()
+endfunction()
+
 # ExternalProject repeats the name three levels deep, and Windows rejects paths
 # over 260 characters by default, so the name has to stay bounded whatever the
 # URL looks like.
@@ -76,6 +86,19 @@ expect_name("https://example.com/some/path/" "https+archive+5982a827")
 expect_name_shorter_than(
   "https://example.com/a/really-quite-long-artifact-filename-that-goes-on-and-on-forever.zip"
   48
+)
+
+# The remote forms clone the way ExternalProject does, submodules included. A
+# consumer that does not want them passes SUBMODULES OFF to fetch_package.
+expect_no_arg("github:LibreOffice/core#distro/collabora/co-25.04" GIT_CONFIG)
+
+expect_no_arg("git:git.example.com/some/repo#main" GIT_CONFIG)
+
+# A bundle carries no submodules to fetch, so that form settles it up front.
+expect_arg(
+  "git:./vendor/core.bundle#main"
+  GIT_CONFIG
+  "submodule.active=none"
 )
 
 message(STATUS "specifiers: ok")
