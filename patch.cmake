@@ -45,7 +45,11 @@ if(EXISTS "package.json")
   )
 
   if(NOT result EQUAL 0)
-    message(FATAL_ERROR "Dependencies could not be installed: ${error}")
+    if(NOT sfw MATCHES "NOTFOUND")
+      message(FATAL_ERROR "Dependencies could not be installed (via Socket Firewall): ${error}")
+    else()
+      message(FATAL_ERROR "Dependencies could not be installed: ${error}")
+    endif()
   endif()
 endif()
 
