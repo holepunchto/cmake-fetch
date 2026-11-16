@@ -1,0 +1,7 @@
+{
+  "name": "patches",
+  "private": true,
+  "devDependencies": {
+    "cmake-fetch": "file:../../.."
+  }
+}

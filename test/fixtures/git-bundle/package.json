@@ -1,0 +1,7 @@
+{
+  "name": "git-bundle",
+  "private": true,
+  "devDependencies": {
+    "cmake-fetch": "file:../../.."
+  }
+}

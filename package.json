@@ -5,8 +5,13 @@
   "files": [
     "*.cmake"
   ],
+  "workspaces": [
+    "test/fixtures/*"
+  ],
   "scripts": {
-    "test": "cmake -P test.cmake"
+    "format": "prettier --write . && lunte --fix",
+    "lint": "prettier --check . && lunte",
+    "test": "brittle-node test.js"
   },
   "repository": {
     "type": "git",
@@ -19,6 +24,11 @@
   },
   "homepage": "https://github.com/holepunchto/cmake-fetch#readme",
   "devDependencies": {
-    "cmake-runtime": "^4.3.1"
+    "bare-make": "^1.8.0",
+    "brittle": "^3.7.0",
+    "cmake-runtime": "^4.3.1",
+    "lunte": "^1.8.0",
+    "prettier": "^3.3.3",
+    "prettier-config-holepunch": "^2.0.0"
   }
 }

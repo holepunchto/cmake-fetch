@@ -1,10 +1,8 @@
-# Asserts what `parse_fetch_specifier` derives from a URL specifier: the package
-# name, which becomes directory names under `_deps` and the OVERRIDE_FIND_PACKAGE
-# name, and the FetchContent arguments.
-#
-# Nothing here touches the network. Run through `cmake -P test.cmake`.
+cmake_minimum_required(VERSION 3.25)
 
-include("${CMAKE_CURRENT_LIST_DIR}/../cmake-fetch.cmake")
+find_package(cmake-fetch REQUIRED PATHS node_modules/cmake-fetch)
+
+project(specifiers NONE)
 
 function(expect_name specifier expected)
   parse_fetch_specifier("${specifier}" name args)
@@ -45,12 +43,29 @@ function(expect_name_shorter_than specifier limit)
   endif()
 endfunction()
 
-expect_name("https://example.com/pkg/prebuilds.zip" "https+prebuilds+a4ec4b51")
+expect_name("github:acme/widget" "github+acme+widget")
+expect_arg("github:acme/widget" GIT_REPOSITORY "https://github.com/acme/widget.git")
+expect_arg("github:acme/widget" GIT_TAG "main")
+expect_arg("github:acme/widget#next" GIT_TAG "next")
+expect_arg("github:acme/widget@1.2.3" GIT_TAG "v1.2.3")
+
+# A commit cannot be fetched shallowly by name, so hashes turn shallow off.
+expect_arg("github:acme/widget#v1.2.3" GIT_SHALLOW ON)
+expect_arg("github:acme/widget#4f2a9c1" GIT_SHALLOW OFF)
+
+expect_name("gitlab:acme/widget" "gitlab+acme+widget")
+expect_arg("gitlab:acme/widget" GIT_REPOSITORY "https://gitlab.com/acme/widget.git")
+
+expect_name("git:example.com/acme/widget" "git+example.com+acme+widget")
+expect_arg("git:example.com/acme/widget" GIT_REPOSITORY "https://example.com/acme/widget.git")
+
+expect_name("git:/path/to/widget.bundle" "git+bundle+widget")
+expect_arg("git:/path/to/widget.bundle@1.2.3" GIT_TAG "v1.2.3")
 
 expect_arg(
-  "https://github.com/holepunchto/bare-kit/releases/download/v2.4.1/prebuilds.zip"
+  "https://github.com/acme/widget/releases/download/v2.4.1/prebuilds.zip"
   URL
-  "https://github.com/holepunchto/bare-kit/releases/download/v2.4.1/prebuilds.zip"
+  "https://github.com/acme/widget/releases/download/v2.4.1/prebuilds.zip"
 )
 
 # The digest exists to make names deterministic and unique, so check both.
@@ -77,5 +92,3 @@ expect_name_shorter_than(
   "https://example.com/a/really-quite-long-artifact-filename-that-goes-on-and-on-forever.zip"
   48
 )
-
-message(STATUS "specifiers: ok")
