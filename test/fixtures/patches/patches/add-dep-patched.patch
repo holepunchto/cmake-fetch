@@ -1,0 +1,23 @@
+diff --git a/dep.c b/dep.c
+index 6745bfc..aca6ea2 100644
+--- a/dep.c
++++ b/dep.c
+@@ -4,3 +4,8 @@ int
+ dep(void) {
+   return 1;
+ }
++
++int
++dep_patched(void) {
++  return 2;
++}
+diff --git a/dep.h b/dep.h
+index c6b73fa..fb213be 100644
+--- a/dep.h
++++ b/dep.h
+@@ -1,2 +1,5 @@
+ int
+ dep(void);
++
++int
++dep_patched(void);

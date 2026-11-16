@@ -14,6 +14,12 @@ jobs:
     name: Security
     steps:
       - uses: holepunchto/actions/security-base@v1
+  lint:
+    runs-on: ubuntu-latest
+    name: Lint
+    steps:
+      - uses: holepunchto/actions/node-base@v1
+      - run: npm run lint
   test:
     strategy:
       matrix:
