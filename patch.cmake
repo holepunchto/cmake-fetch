@@ -31,10 +31,12 @@ if(EXISTS "package.json")
     set(npm "${sfw}" ${npm})
   endif()
 
+  # Only a lockfile that ships with the package is trusted, so don't write one
+  # that a later update of the package would disagree with.
   if(EXISTS "package-lock.json")
     set(install clean-install)
   else()
-    set(install install)
+    set(install install --no-package-lock)
   endif()
 
   execute_process(

@@ -4,7 +4,7 @@ const make = require('bare-make')
 
 const modules = path.resolve(__dirname, '..', 'node_modules')
 
-exports.build = function build(fixture) {
+exports.build = function build(fixture, check) {
   test(fixture, { timeout: 300000 }, async (t) => {
     const cwd = path.resolve(__dirname, '..', fixture)
 
@@ -20,5 +20,7 @@ exports.build = function build(fixture) {
     await make.build({ cwd, build: 'build', clean: true, stdio: 'inherit' })
 
     t.pass('built')
+
+    if (check) check(t, cwd)
   })
 }
