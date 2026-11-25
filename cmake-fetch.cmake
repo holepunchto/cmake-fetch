@@ -208,6 +208,7 @@ endfunction()
 
 function(fetch_package specifier)
   set(one_value_keywords
+    PACKAGE
     SOURCE_SUBDIR
     SOURCE_DIR
     BINARY_DIR
@@ -218,8 +219,14 @@ function(fetch_package specifier)
   )
 
   cmake_parse_arguments(
-    PARSE_ARGV 1 ARGV "" "${one_value_keywords}" "${multi_value_keywords}"
+    PARSE_ARGV 1 ARGV "INSTALL" "${one_value_keywords}" "${multi_value_keywords}"
   )
+
+  if(ARGV_INSTALL)
+    set(exclude_from_all)
+  else()
+    set(exclude_from_all EXCLUDE_FROM_ALL)
+  endif()
 
   list(TRANSFORM ARGV_PATCHES PREPEND "${CMAKE_CURRENT_LIST_DIR}/")
 
@@ -227,7 +234,7 @@ function(fetch_package specifier)
 
   set(args)
 
-  parse_fetch_specifier(${specifier} target args)
+  parse_fetch_specifier(${specifier} target args VERSION version)
 
   if(DEFINED ARGV_SOURCE_SUBDIR)
     list(APPEND args SOURCE_SUBDIR "${ARGV_SOURCE_SUBDIR}")
@@ -237,11 +244,15 @@ function(fetch_package specifier)
     ${target}
     ${args}
     PATCH_COMMAND ${CMAKE_COMMAND} -DPATCHES=${patches} -P "${fetch_module_dir}/patch.cmake"
-    EXCLUDE_FROM_ALL ON
+    ${exclude_from_all}
     OVERRIDE_FIND_PACKAGE
   )
 
   FetchContent_MakeAvailable(${target})
+
+  if(DEFINED ARGV_PACKAGE)
+    _fetch_redirect_package(${ARGV_PACKAGE} "${version}")
+  endif()
 
   FetchContent_GetProperties(
     ${target}
@@ -258,6 +269,38 @@ function(fetch_package specifier)
   endif()
 
   return(PROPAGATE ${ARGV_SOURCE_DIR} ${ARGV_BINARY_DIR})
+endfunction()
+
+# Let find_package() find the package in the build tree, unless the package
+# already did so itself.
+function(_fetch_redirect_package package version)
+  string(TOLOWER "${package}" name)
+
+  set(config "${CMAKE_FIND_PACKAGE_REDIRECTS_DIR}/${name}-config.cmake")
+
+  if(EXISTS "${config}")
+    return()
+  endif()
+
+  file(WRITE "${config}" "")
+
+  set(config_version "${CMAKE_FIND_PACKAGE_REDIRECTS_DIR}/${name}-config-version.cmake")
+
+  if(version)
+    include(CMakePackageConfigHelpers)
+
+    write_basic_package_version_file(
+      "${config_version}"
+      VERSION ${version}
+      COMPATIBILITY SameMajorVersion
+      ARCH_INDEPENDENT
+    )
+  else()
+    file(
+      WRITE "${config_version}"
+      "set(PACKAGE_VERSION_COMPATIBLE TRUE)\nset(PACKAGE_VERSION_EXACT TRUE)\n"
+    )
+  endif()
 endfunction()
 
 function(_fetch_platform result)
@@ -491,6 +534,9 @@ function(fetch_prebuilds specifier)
   FetchContent_MakeAvailable(${name})
 
   FetchContent_GetProperties(${name} SOURCE_DIR prefix)
+
+  # Let the packages find their dependencies in the same archive.
+  list(PREPEND CMAKE_PREFIX_PATH "${prefix}")
 
   foreach(package IN LISTS missing)
     find_package(${package} ${version} CONFIG REQUIRED PATHS "${prefix}" NO_DEFAULT_PATH)

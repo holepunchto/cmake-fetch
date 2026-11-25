@@ -16,7 +16,7 @@ find_package(cmake-fetch REQUIRED PATHS node_modules/cmake-fetch)
 
 Parse `<specifier>` into a `FetchContent` name, written to the `<target>` variable, and the arguments to declare it with, written to the `<args>` variable. See `fetch_package()` for the forms a specifier can take. `VERSION` writes the version of the specifier to `<var>`, or an empty string if it has none. `ASSET` fetches the release asset `<name>` instead of the repository for a `github:` specifier with a version, such as `<target>.tar.xz` from the `v<version>` release. Specifiers that are a URL ignore it.
 
-#### `fetch_package(<specifier> [SOURCE_SUBDIR <path>] [SOURCE_DIR <var>] [BINARY_DIR <var>] [PATCHES <path...>])`
+#### `fetch_package(<specifier> [PACKAGE <name>] [SOURCE_SUBDIR <path>] [SOURCE_DIR <var>] [BINARY_DIR <var>] [PATCHES <path...>] [INSTALL])`
 
 Fetch the package named by `<specifier>` and add it to the build with `FetchContent`. The specifier takes one of these forms:
 
@@ -34,7 +34,9 @@ fetch_package("github:example/bar#next")
 fetch_package("https://example.com/baz.tar.gz")
 ```
 
-The package is added with `add_subdirectory()`, but excluded from `all`, so its targets are only built when something links them and aren't installed with the project. Pass `SOURCE_SUBDIR` if its `CMakeLists.txt` isn't at the root. `SOURCE_DIR` and `BINARY_DIR` write the source and build directories of the package to the given variables.
+The package is added with `add_subdirectory()`, but excluded from `all`, so its targets are only built when something links them and aren't installed with the project. Pass `INSTALL` to build all of its targets and install it with the project instead, such as when an installed package of the project depends on it and should ship with it. The packages that it fetches itself are still excluded, unless it passes `INSTALL` too. A package is only added once, so the first call to fetch it decides. Pass `SOURCE_SUBDIR` if its `CMakeLists.txt` isn't at the root. `SOURCE_DIR` and `BINARY_DIR` write the source and build directories of the package to the given variables.
+
+`PACKAGE` lets `find_package(<name>)` find the package in the build tree, such as when an installed package that depends on it is found later, for example with `fetch_prebuilds()`. It accepts the version of the specifier and later versions with the same major version, or any version if the specifier has none. The package must then also provide the targets that the installed package links, under the names its own installed package gives them. Packages that use `cmake-prelude` do all of this themselves, so `PACKAGE` is only needed for other packages.
 
 `PATCHES` lists patches to apply to the package with `git apply`, in order, relative to the directory of the current list file. The applied patches are recorded, so when the list changes, only the patches that differ are reverted and applied again.
 
@@ -48,7 +50,7 @@ The specifier is either `github:<owner>/<repo>@<version>`, which fetches `<targe
 
 `CHECKSUMS` is a file of SHA-256 checksums in the format written by `sha256sum`, such as a copy of the `SHA256SUMS` of a release. The archive is verified against the checksum of its file name, and configuration fails if there is none. To update the file, download it from the release, for example with `gh release download v<version> -R <owner>/<repo> -p SHA256SUMS -O <path>`.
 
-Like `FetchContent`, the packages are first looked for with `find_package()`, so a package can be provided with `CMAKE_PREFIX_PATH` or `<name>_DIR` instead. Set `FETCHCONTENT_TRY_FIND_PACKAGE_MODE` to `NEVER` to always fetch the archive. Packages that aren't found are only looked for in the archive.
+Like `FetchContent`, the packages are first looked for with `find_package()`, so a package can be provided with `CMAKE_PREFIX_PATH` or `<name>_DIR` instead. Set `FETCHCONTENT_TRY_FIND_PACKAGE_MODE` to `NEVER` to always fetch the archive. Packages that aren't found are only looked for in the archive, and the dependencies they find are looked for there first.
 
 Pass `INSTALL` to install the archive along with the project when it's fetched, which a package exported by the project needs to find its dependencies.
 
