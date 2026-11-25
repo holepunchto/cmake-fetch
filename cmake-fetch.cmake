@@ -9,6 +9,15 @@ set(fetch_module_dir "${CMAKE_CURRENT_LIST_DIR}")
 include(FetchContent)
 
 function(parse_fetch_specifier specifier target args)
+  set(one_value_keywords
+    ASSET
+    VERSION
+  )
+
+  cmake_parse_arguments(
+    PARSE_ARGV 3 ARGV "" "${one_value_keywords}" ""
+  )
+
   cmake_language(GET_MESSAGE_LOG_LEVEL log_level)
 
   if(log_level MATCHES "STATUS|VERBOSE|DEBUG|TRACE")
@@ -24,12 +33,33 @@ function(parse_fetch_specifier specifier target args)
   endif()
 
   if(protocol MATCHES "git(hub|lab)")
-    if(specifier MATCHES "^git(hub|lab):(@?[A-Za-z0-9_./-]+)(#[A-Za-z0-9_./-]+)?(@[0-9]+\.[0-9]+\.[0-9]+)?")
+    if(specifier MATCHES "^git(hub|lab):(@?[A-Za-z0-9_./-]+)(#[A-Za-z0-9_./-]+)?(@[0-9]+(\.[0-9]+)*)?")
       set(package "${CMAKE_MATCH_2}")
       set(ref "${CMAKE_MATCH_3}")
       set(version "${CMAKE_MATCH_4}")
     else()
       message(FATAL_ERROR "Invalid package specifier \"${specifier}\"")
+    endif()
+
+    if(DEFINED ARGV_ASSET)
+      if(NOT protocol STREQUAL "github" OR NOT version OR ref)
+        message(FATAL_ERROR "Assets can only be fetched with a github: specifier that has a version, not \"${specifier}\"")
+      endif()
+
+      string(REGEX REPLACE "@" "" tag "v${version}")
+
+      parse_fetch_specifier("https://github.com/${package}/releases/download/${tag}/${ARGV_ASSET}" asset_target asset_args)
+
+      set(${target} ${asset_target} PARENT_SCOPE)
+      set(${args} ${asset_args} PARENT_SCOPE)
+
+      if(DEFINED ARGV_VERSION)
+        string(REGEX REPLACE "@" "" ${ARGV_VERSION} "${version}")
+
+        return(PROPAGATE ${ARGV_VERSION})
+      endif()
+
+      return()
     endif()
 
     string(REGEX REPLACE "/" "+" escaped "${protocol}+${package}")
@@ -59,7 +89,7 @@ function(parse_fetch_specifier specifier target args)
       PARENT_SCOPE
     )
   elseif(protocol MATCHES "git")
-    if(specifier MATCHES "^git:(.+\\.bundle)(#[A-Za-z0-9_./-]+)?(@[0-9]+\\.[0-9]+\\.[0-9]+)?$")
+    if(specifier MATCHES "^git:(.+\\.bundle)(#[A-Za-z0-9_./-]+)?(@[0-9]+(\\.[0-9]+)*)?$")
       set(path "${CMAKE_MATCH_1}")
       set(ref "${CMAKE_MATCH_2}")
       set(version "${CMAKE_MATCH_3}")
@@ -87,7 +117,7 @@ function(parse_fetch_specifier specifier target args)
         GIT_CONFIG submodule.active=none
         PARENT_SCOPE
       )
-    elseif(specifier MATCHES "^git:([^/]+)/([A-Za-z0-9_./-]+)(#[A-Za-z0-9_./-]+)?(@[0-9]+\.[0-9]+\.[0-9]+)?")
+    elseif(specifier MATCHES "^git:([^/]+)/([A-Za-z0-9_./-]+)(#[A-Za-z0-9_./-]+)?(@[0-9]+(\.[0-9]+)*)?")
       set(host "${CMAKE_MATCH_1}")
       set(repo "${CMAKE_MATCH_2}")
       set(ref "${CMAKE_MATCH_3}")
@@ -168,6 +198,12 @@ function(parse_fetch_specifier specifier target args)
   else()
     message(FATAL_ERROR "Unknown package protocol \"${protocol}\"")
   endif()
+
+  if(DEFINED ARGV_VERSION)
+    string(REGEX REPLACE "@" "" ${ARGV_VERSION} "${version}")
+
+    return(PROPAGATE ${ARGV_VERSION})
+  endif()
 endfunction()
 
 function(fetch_package specifier)
@@ -222,4 +258,245 @@ function(fetch_package specifier)
   endif()
 
   return(PROPAGATE ${ARGV_SOURCE_DIR} ${ARGV_BINARY_DIR})
+endfunction()
+
+function(_fetch_platform result)
+  cmake_parse_arguments(
+    PARSE_ARGV 1 ARGV "HOST" "" ""
+  )
+
+  if(ARGV_HOST)
+    set(platform ${CMAKE_HOST_SYSTEM_NAME})
+  else()
+    set(platform ${CMAKE_SYSTEM_NAME})
+
+    if(NOT platform)
+      set(platform ${CMAKE_HOST_SYSTEM_NAME})
+    endif()
+  endif()
+
+  string(TOLOWER "${platform}" platform)
+
+  if(platform MATCHES "darwin|ios|watchos|linux|android|wasi|freertos")
+    set(${result} ${platform})
+  elseif(platform MATCHES "windows")
+    set(${result} "win32")
+  else()
+    set(${result} "unknown")
+  endif()
+
+  return(PROPAGATE ${result})
+endfunction()
+
+function(_fetch_arch result)
+  cmake_parse_arguments(
+    PARSE_ARGV 1 ARGV "HOST" "" ""
+  )
+
+  if(ARGV_HOST)
+    set(arch ${CMAKE_HOST_SYSTEM_PROCESSOR})
+  else()
+    if(APPLE AND CMAKE_OSX_ARCHITECTURES)
+      set(arch ${CMAKE_OSX_ARCHITECTURES})
+    elseif(MSVC AND CMAKE_GENERATOR_PLATFORM)
+      set(arch ${CMAKE_GENERATOR_PLATFORM})
+    elseif(ANDROID AND CMAKE_ANDROID_ARCH_ABI)
+      set(arch ${CMAKE_ANDROID_ARCH_ABI})
+    else()
+      set(arch ${CMAKE_SYSTEM_PROCESSOR})
+    endif()
+
+    if(NOT arch AND NOT CMAKE_CROSSCOMPILING)
+      set(arch ${CMAKE_HOST_SYSTEM_PROCESSOR})
+    endif()
+  endif()
+
+  list(LENGTH arch length)
+
+  string(TOLOWER "${arch}" arch)
+
+  if(length GREATER 1)
+    set(${result} "universal")
+  elseif(arch MATCHES "arm64_32")
+    set(${result} "arm64-32")
+  elseif(arch MATCHES "arm64|aarch64")
+    set(${result} "arm64")
+  elseif(arch MATCHES "armv8m")
+    set(${result} "armv8m")
+  elseif(arch MATCHES "armv7-a|armeabi-v7a")
+    set(${result} "arm")
+  elseif(arch MATCHES "x64|x86_64|amd64")
+    set(${result} "x64")
+  elseif(arch MATCHES "x86|i386|i486|i586|i686")
+    set(${result} "ia32")
+  elseif(arch MATCHES "riscv64")
+    set(${result} "riscv64")
+  elseif(arch MATCHES "riscv32")
+    set(${result} "riscv32")
+  elseif(arch MATCHES "mipsel")
+    set(${result} "mipsel")
+  elseif(arch MATCHES "mips(eb)?")
+    set(${result} "mips")
+  elseif(arch MATCHES "wasm32")
+    set(${result} "wasm32")
+  else()
+    set(${result} "unknown")
+  endif()
+
+  return(PROPAGATE ${result})
+endfunction()
+
+function(_fetch_environment result)
+  cmake_parse_arguments(
+    PARSE_ARGV 1 ARGV "HOST" "" ""
+  )
+
+  set(environment "")
+
+  if(NOT ARGV_HOST)
+    if(APPLE AND CMAKE_OSX_SYSROOT MATCHES "iPhoneSimulator|WatchSimulator")
+      set(environment "simulator")
+    elseif(LINUX AND CMAKE_C_COMPILER_TARGET MATCHES "-linux-(musl(sf)?)")
+      set(environment "${CMAKE_MATCH_1}")
+    endif()
+  endif()
+
+  set(${result} ${environment})
+
+  return(PROPAGATE ${result})
+endfunction()
+
+function(_fetch_target result)
+  cmake_parse_arguments(
+    PARSE_ARGV 1 ARGV "HOST" "" ""
+  )
+
+  if(ARGV_HOST)
+    set(host HOST)
+  else()
+    set(host)
+  endif()
+
+  _fetch_platform(platform ${host})
+  _fetch_arch(arch ${host})
+  _fetch_environment(environment ${host})
+
+  set(target ${platform}-${arch})
+
+  if(environment)
+    set(target ${target}-${environment})
+  endif()
+
+  set(${result} ${target})
+
+  return(PROPAGATE ${result})
+endfunction()
+
+function(fetch_prebuilds specifier)
+  set(one_value_keywords
+    CHECKSUMS
+    VERSION
+  )
+
+  set(multi_value_keywords
+    PACKAGES
+  )
+
+  cmake_parse_arguments(
+    PARSE_ARGV 1 ARGV "INSTALL" "${one_value_keywords}" "${multi_value_keywords}"
+  )
+
+  if(NOT ARGV_CHECKSUMS)
+    message(FATAL_ERROR "fetch_prebuilds() requires CHECKSUMS")
+  endif()
+
+  if(NOT ARGV_PACKAGES)
+    message(FATAL_ERROR "fetch_prebuilds() requires PACKAGES")
+  endif()
+
+  _fetch_target(target)
+
+  parse_fetch_specifier(${specifier} name args ASSET ${target}.tar.xz VERSION version)
+
+  cmake_parse_arguments(fetch "" "URL" "" ${args})
+
+  if(NOT fetch_URL)
+    message(FATAL_ERROR "Prebuilds must be fetched from a URL, not \"${specifier}\"")
+  endif()
+
+  if(NOT version)
+    set(version ${ARGV_VERSION})
+  endif()
+
+  set(missing)
+
+  foreach(package IN LISTS ARGV_PACKAGES)
+    # A package found in an earlier fetch must not count as found already, or
+    # the archive would never be fetched or installed again.
+    if(${package}_DIR)
+      cmake_path(IS_PREFIX FETCHCONTENT_BASE_DIR "${${package}_DIR}" NORMALIZE fetched)
+
+      if(fetched)
+        unset(${package}_DIR CACHE)
+      endif()
+    endif()
+
+    if(NOT FETCHCONTENT_TRY_FIND_PACKAGE_MODE STREQUAL "NEVER")
+      find_package(${package} ${version} CONFIG QUIET)
+    endif()
+
+    if(NOT ${package}_FOUND)
+      list(APPEND missing ${package})
+    endif()
+  endforeach()
+
+  if(NOT missing)
+    return()
+  endif()
+
+  set(checksums "${ARGV_CHECKSUMS}")
+
+  cmake_path(ABSOLUTE_PATH checksums BASE_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" NORMALIZE)
+
+  set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${checksums}")
+
+  string(REGEX REPLACE "[?#].*$" "" file "${fetch_URL}")
+
+  cmake_path(GET file FILENAME file)
+
+  file(STRINGS "${checksums}" lines)
+
+  set(hash)
+
+  foreach(line IN LISTS lines)
+    if(line MATCHES "^([0-9a-fA-F]+) [ *](.+)$" AND CMAKE_MATCH_2 STREQUAL file)
+      string(LENGTH "${CMAKE_MATCH_1}" length)
+
+      if(length EQUAL 64)
+        set(hash ${CMAKE_MATCH_1})
+      endif()
+    endif()
+  endforeach()
+
+  if(NOT hash)
+    message(FATAL_ERROR "There is no checksum for ${file} in ${checksums}")
+  endif()
+
+  FetchContent_Declare(
+    ${name}
+    ${args}
+    URL_HASH SHA256=${hash}
+  )
+
+  FetchContent_MakeAvailable(${name})
+
+  FetchContent_GetProperties(${name} SOURCE_DIR prefix)
+
+  foreach(package IN LISTS missing)
+    find_package(${package} ${version} CONFIG REQUIRED PATHS "${prefix}" NO_DEFAULT_PATH)
+  endforeach()
+
+  if(ARGV_INSTALL)
+    install(DIRECTORY "${prefix}/" DESTINATION . USE_SOURCE_PERMISSIONS)
+  endif()
 endfunction()
